@@ -1,1 +1,18 @@
-{"name":"DJ SEBA – Centrum Artysty","short_name":"DJ SEBA","start_url":"./","scope":"./","display":"standalone","background_color":"#07151c","theme_color":"#07151c","icons":[{"src":"logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "DJ SEBA – Centrum Artysty",
+  "short_name": "DJ SEBA",
+  "start_url": "./?pwa=1.4",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07151c",
+  "theme_color": "#07151c",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./"
+}

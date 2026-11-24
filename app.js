@@ -51,13 +51,12 @@
     return data;
   }
   async function connect(){
-    let clientId=($('client-id').value||'').trim()||BUILTIN_CLIENT_ID;
-    // Odporność na błąd klienta ze starszej wersji lub zapamiętane ustawienia przeglądarki.
-    if(clientId===LEGACY_BAD_CLIENT_ID){
-      clientId=BUILTIN_CLIENT_ID;
-      $('client-id').value=BUILTIN_CLIENT_ID;
-      try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
-    }
+    // Zawsze używamy zatwierdzonego klienta OAuth tej aplikacji.
+    // PWA/skrót mogą mieć inną pamięć lokalną niż karta Chrome, dlatego stary zapis nigdy
+    // nie może nadpisać identyfikatora używanego do logowania Google.
+    const clientId=BUILTIN_CLIENT_ID;
+    if($('client-id').value!==BUILTIN_CLIENT_ID) $('client-id').value=BUILTIN_CLIENT_ID;
+    try { if(localStorage.getItem(KEY)!==BUILTIN_CLIENT_ID) localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
     if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId)) {switchTab('settings');toast('Zapisz Client ID z Google Cloud (końcówka .apps.googleusercontent.com).');return;}
     if(location.protocol==='file:'){notice('Google OAuth nie działa poprawnie z pliku file://. Opublikuj stronę na GitHub Pages (HTTPS) albo uruchom na localhost.', 'error');switchTab('settings');return;}
     if(!window.google?.accounts?.oauth2){toast('Biblioteka Google jest niedostępna. Sprawdź internet i blokery skryptów.');return;}
@@ -455,17 +454,15 @@
   }
 
   function init(){
-    // Przenieś zapisane ustawienie z błędnej wersji 1.2 bez usuwania historii CSV ani komentarzy.
+    // Migracja ID ze starszych instalacji, bez czyszczenia raportów ani historii.
     let storedClientId='';
     try { storedClientId=localStorage.getItem(KEY)||''; } catch {}
-    const fixedLegacyId=storedClientId===LEGACY_BAD_CLIENT_ID;
-    if(fixedLegacyId){
-      storedClientId=BUILTIN_CLIENT_ID;
-      try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
-    }
-    $('client-id').value=storedClientId||BUILTIN_CLIENT_ID;
+    const fixedLegacyId=Boolean(storedClientId && storedClientId!==BUILTIN_CLIENT_ID);
+    try { if(storedClientId!==BUILTIN_CLIENT_ID) localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
+    $('client-id').value=BUILTIN_CLIENT_ID;
+    $('client-id').readOnly=true;
     $('origin').textContent=location.origin==='null'?'https://NAZWA.github.io':location.origin;
-    $('save-config').addEventListener('click',()=>{const cid=$('client-id').value.trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(cid)){toast('Client ID ma niepoprawny format.');return;}try {localStorage.setItem(KEY,cid);} catch(e) {toast('Przeglądarka blokuje zapis ustawień. ID będzie działał w tej karcie.');return;}toast('Client ID zapisany wyłącznie w tej przeglądarce.');});
+
     $('reset-client-id').addEventListener('click',()=>{
       $('client-id').value=BUILTIN_CLIENT_ID;
       try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
@@ -491,7 +488,7 @@
     $('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;if(file.size>4000000){toast('Maksymalny rozmiar CSV to 4 MB.');return;}try{const d=parseCsv(await file.text());for(const s of d){const i=songs.findIndex(x=>x.title===s.title);i>=0?songs[i]=s:songs.push(s);}saveSongs();renderSongs();$('csv-info').textContent=`Zaimportowano ${d.length} utworów z ${file.name}${/1year|12month|rok|year/i.test(file.name)?' (zakres: 12 miesięcy)':''}. Dane zapisano lokalnie w tej przeglądarce.`;toast('Import Spotify zakończony.');}catch(ex){toast('Import CSV: '+ex.message)}e.target.value='';});
     $('export-stats').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),songs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DJ_SEBA_Spotify_kopia.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
     authState();renderComments();renderSongs();renderPlay();renderDistro();
-    if(location.protocol!=='file:')notice(fixedLegacyId?'Wykryto i poprawiono stary błędny identyfikator Google OAuth. Kliknij „Połącz Google / YouTube”.':'Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');
+    if(location.protocol!=='file:')notice(fixedLegacyId?'Zastąpiono wcześniejsze ustawienie poprawnym identyfikatorem Google OAuth. Kliknij „Połącz Google / YouTube”.':'Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');
     if(location.protocol==='file:')notice('To lokalny podgląd. Aby zalogować Google, opublikuj pliki na GitHub Pages (HTTPS).','error');
   }
   document.addEventListener('DOMContentLoaded',init);

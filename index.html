@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>DJ SEBA – Centrum Artysty</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css?v=1.1"><script src="https://accounts.google.com/gsi/client" async defer></script><script src="app.js?v=1.1" defer></script></head>
-<body><header><div class="top container"><div class="brand"><div class="logo">DS</div><div><strong>DJ SEBA</strong><small>CENTRUM ARTYSTY · WEB v1.1</small></div></div><div class="account"><span id="auth-label" class="status">Niepołączony</span><button id="connect" class="primary">Połącz Google / YouTube</button><button id="disconnect" class="ghost" hidden>Rozłącz</button></div></div></header>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>DJ SEBA – Centrum Artysty</title><link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css?v=1.2"><script src="https://accounts.google.com/gsi/client" async defer></script><script src="app.js?v=1.1" defer></script></head>
+<body><header><div class="top container"><div class="brand"><div class="logo">DS</div><div><strong>DJ SEBA</strong><small>CENTRUM ARTYSTY · WEB v1.2</small></div></div><div class="account"><span id="auth-label" class="status">Niepołączony</span><button id="connect" class="primary">Połącz Google / YouTube</button><button id="disconnect" class="ghost" hidden>Rozłącz</button></div></div></header>
 <main class="container">
 <section class="hero"><div class="eyebrow">TWOJE MEDIA • JEDEN PANEL • BEZ SERWERA</div><h1>Komentarze i słuchacze. W jednym miejscu.</h1><p>Panel do otwierania w pracy i na telefonie. Publikowanie wyłącznie po Twoim zatwierdzeniu.</p></section>
 <div id="notice" class="notice">Publiczny Client ID jest już ustawiony. Kliknij „Połącz Google / YouTube” i wybierz konto zarządzające DJ SEBA.</div>
@@ -16,16 +16,36 @@
 
 <section id="distrokid" class="tab-panel"><div class="panel spaced">
  <div class="sectionhead"><div><div class="eyebrow">DYSTRYBUCJA MUZYKI</div><h2>DistroKid – raporty zarobków</h2></div><span class="pill">Import CSV</span></div>
- <p class="muted">Rzeczywiste rozliczenia pochodzą z eksportu DistroKid Bank. Nie szacujemy zarobków na podstawie odsłuchów.</p>
- <div class="actions"><a href="https://distrokid.com/bank" target="_blank" rel="noopener">Otwórz DistroKid Bank ↗</a><label class="upload"><input type="file" id="distro-csv" accept=".csv,text/csv">Importuj raport CSV</label></div>
+ <p class="muted">Rzeczywiste rozliczenia pochodzą z DistroKid Bank. Dane mogą pojawiać się z opóźnieniem względem odsłuchów Spotify.</p>
+ <div class="export-guide" aria-label="Gdzie pobrać raport CSV DistroKid">
+   <h3>Skąd pobrać CSV? Otwórz właściwy raport</h3>
+   <div class="export-shortcuts">
+     <a class="source-link source-link-main" href="https://distrokid.com/bank/details/" target="_blank" rel="noopener noreferrer">① Szczegółowe rozliczenia — CSV ↗</a>
+     <a class="source-link" href="https://distrokid.com/bank/priority" target="_blank" rel="noopener noreferrer">Gotowe raporty do pobrania ↗</a>
+     <a class="source-link" href="https://distrokid.com/bank" target="_blank" rel="noopener noreferrer">Bank — widok podstawowy ↗</a>
+   </div>
+   <ol class="export-steps"><li>Otwórz <b>① Szczegółowe rozliczenia</b> i zaloguj się do DistroKid, jeśli trzeba.</li><li>W prawym górnym rogu kliknij <b>Download</b> obok <b>Display</b> i pobierz raport CSV. Jeśli raport jest generowany, znajdziesz go później pod „Gotowe raporty”.</li><li>Wróć tutaj i kliknij <b>Importuj pobrany CSV</b>.</li></ol>
+   <p class="export-caveat">Jeśli DistroKid nie ma jeszcze rozliczonych przychodów, CSV może być pusty lub niedostępny. Raporty finansowe nie są bieżącą liczbą odtworzeń.</p>
+ </div>
+ <div class="actions"><label class="upload"><input type="file" id="distro-csv" accept=".csv,text/csv">Importuj pobrany CSV DistroKid</label></div>
  <p id="distro-info" class="muted">Brak zaimportowanego raportu zarobków.</p>
  <div class="metrics metrics-three"><div class="metric"><b id="d-rows">—</b><small>Wiersze rozliczeń</small></div><div class="metric"><b id="d-tracks">—</b><small>Utwory w raportach</small></div><div class="metric"><b id="d-total">—</b><small>Wartość raportu</small></div></div>
  <div id="distro-report" class="table-scroll"></div><p class="muted footnote">Kwoty i waluty pokażemy tylko wtedy, gdy odpowiadające kolumny istnieją w raporcie. Przy kilku walutach nie sumujemy ich do jednej liczby.</p>
 </div></section>
 <section id="googleplay" class="tab-panel"><div class="panel spaced">
  <div class="sectionhead"><div><div class="eyebrow">DJ SEBA APPS</div><h2>Google Play – instalacje i popularność aplikacji</h2></div><span class="pill">Google Play</span></div>
- <p class="muted">Monitoruj m.in. Muzyczny Prezent i Ramka Rodzinna z Play Console: nowe instalacje, aktywną bazę instalacji lub pozyskanie użytkowników – w zależności od eksportowanego raportu.</p>
- <div class="actions"><a href="https://play.google.com/console/" target="_blank" rel="noopener">Otwórz Google Play Console ↗</a><label class="upload"><input id="play-csv" type="file" accept=".csv,text/csv" multiple>Wczytaj raporty CSV</label></div>
+ <p class="muted">Sprawdzaj wyniki swoich aplikacji, np. Muzyczny Prezent i Ramka Rodzinna: pozyskanie użytkowników, instalacje i stan zainstalowanej bazy.</p>
+ <div class="export-guide" aria-label="Gdzie pobrać statystyki CSV Google Play Console">
+   <h3>Skąd pobrać CSV? Przejdź do Statystyk aplikacji</h3>
+   <div class="export-shortcuts">
+     <a class="source-link source-link-main" href="https://play.google.com/console/developers/statistics" target="_blank" rel="noopener noreferrer">① Google Play — Statystyki ↗</a>
+     <a class="source-link" href="https://play.google.com/console/" target="_blank" rel="noopener noreferrer">Lista moich aplikacji ↗</a>
+     <a class="source-link" href="https://support.google.com/googleplay/android-developer/answer/6135870?hl=pl" target="_blank" rel="noopener noreferrer">Raporty miesięczne — instrukcja ↗</a>
+   </div>
+   <ol class="export-steps"><li>Kliknij <b>① Google Play — Statystyki</b>. Jeśli pojawi się wybór konta lub lista aplikacji, wybierz właściwą aplikację, a potem <b>Statystyki</b> w jej menu.</li><li>Ustaw zakres (np. 28 dni lub 12 miesięcy) i metrykę, np. <b>Nowi użytkownicy / Pozyskanie użytkowników</b> albo <b>Zainstalowani odbiorcy</b>. Wybierz dane liczbowe i przedział dzienny, jeśli dostępny.</li><li>Przy wykresie kliknij <b>Eksportuj raport / Export report</b> i wybierz CSV z danymi, a następnie użyj przycisku <b>Wczytaj raporty CSV Google Play</b> poniżej.</li></ol>
+   <p class="export-caveat">Link do konkretnej aplikacji jest indywidualny dla konta Google Play Console — nie da się go bezpiecznie odgadnąć. Możesz wczytać osobny CSV dla każdej aplikacji. „Nowi użytkownicy” (przyrost) i „Zainstalowani odbiorcy” (stan) to różne metryki.</p>
+ </div>
+ <div class="actions"><label class="upload"><input id="play-csv" type="file" accept=".csv,text/csv" multiple>Wczytaj raporty CSV Google Play</label></div>
  <div id="play-preview" class="import-preview" hidden><div class="section-title">Kontrola danych przed zapisem</div><p id="play-file" class="muted"></p>
  <label for="play-metric">Wybierz kolumnę statystyki (np. Daily User Installs lub Install base)</label><select id="play-metric"></select>
  <div class="actions"><button class="primary" id="play-confirm">Zapisz raport</button><button class="ghost" id="play-cancel">Anuluj</button></div></div>
@@ -35,4 +55,4 @@
  <p class="muted footnote"><b>Uwaga:</b> wartości „Install base” są stanem na dany dzień, a „Daily User Installs” to przyrosty dzienne. Program pokazuje nazwę wybranej metryki i nie dodaje tych wartości do siebie. Nie synchronizuje danych z prywatnego Google Play Console automatycznie.</p>
 </div></section>
 <section id="settings" class="tab-panel"><div class="panel spaced"><h2>Połączenie bezpłatne – Google OAuth</h2><p>Publiczny <b>Client ID</b> DJ SEBA jest już wpisany do aplikacji. Na nowych urządzeniach nie trzeba go kopiować. Logowanie do YouTube nadal zatwierdzasz osobno na każdym urządzeniu.</p><label for="client-id">Client ID (kończy się na .apps.googleusercontent.com)</label><div class="actions"><input id="client-id" type="text" class="wide" spellcheck="false" autocomplete="off" placeholder="123456789-…apps.googleusercontent.com"><button id="save-config" class="ghost">Zapisz zmianę ID (opcjonalnie)</button></div><p class="muted">Nie musisz nic wpisywać, żeby korzystać z DJ SEBA. Pole możesz zmienić wyłącznie przy zmianie własnej konfiguracji Google Cloud. Nigdy nie wpisuj Client Secret, klucza YouTube API ani hasła.</p><div class="note"><b>Google Cloud → Klienci → DJ-SEBA-Centrum-Web</b><p>Do „Autoryzowane źródła JavaScript” dodaj dokładnie <b id="origin">adres domeny tej strony</b>. Nie wpisuj ścieżki do repozytorium. Zostaw obecny lokalny adres przekierowania dla wcześniejszego projektu.</p></div><p>Jeżeli aplikacja jest w trybie <b>Testowanie</b>, upewnij się, że konto Google zarządzające DJ SEBA znajduje się na liście użytkowników testowych.</p><h3>Kopie danych i przenoszenie na telefon</h3><p>Zaimportowane raporty Spotify, DistroKid i Google Play są przechowywane wyłącznie na urządzeniu, na którym je wczytasz. Możesz je przenieść plikiem JSON. Token OAuth nie jest kopiowany.</p><div class="actions"><button class="ghost" id="backup-all">Pobierz kopię wszystkich raportów (JSON)</button><label class="upload"><input type="file" id="restore-all" accept="application/json,.json">Wczytaj kopię danych</label></div><h3>Bezpieczeństwo i ograniczenia</h3><p>Token Google działa wyłącznie w pamięci otwartej strony. Zamknięcie karty lub jego wygaśnięcie wymaga ponownego połączenia. Nie przechowujemy tokenu w pliku ani w localStorage. W publicznym repozytorium GitHub nie wolno umieszczać Client Secret, kluczy API ani prywatnych raportów CSV. Serwer GitHub Pages udostępnia tylko kod aplikacji, a komentarze pobiera bezpośrednio Twoja przeglądarka.</p><p>Bez otwartej strony nie ma automatycznego monitorowania w tle, a pominięte komentarze nie synchronizują się pomiędzy urządzeniami. W razie blokady Google OAuth lub GitHub Pages przez politykę firmy potrzebna będzie zgoda firmowego IT.</p></div></section>
-</main><footer class="container">DJ SEBA Apps · Wersja 1.1 · YouTube OAuth · Spotify · DistroKid · Google Play · bez własnego serwera</footer><div id="toast" role="status" aria-live="polite"></div></body></html>
+</main><footer class="container">DJ SEBA Apps · Wersja 1.2 · YouTube OAuth · Spotify · DistroKid · Google Play · bez własnego serwera</footer><div id="toast" role="status" aria-live="polite"></div></body></html>

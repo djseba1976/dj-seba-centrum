@@ -8,3 +8,16 @@
 .thanks-button{border-color:#24c5bd;background:#25c7c2;color:#07262c;font-weight:850}
 .thanks-button:hover:not(:disabled){filter:brightness(1.06)}
 .thanks-box .muted{font-size:12px;line-height:1.4}
+
+/* v1.2: szybkie przejscia do raportow CSV, z jasnymi krokami. */
+.export-guide{border:1px solid #2c7480;background:linear-gradient(135deg,#133640,#102732);padding:15px 17px;border-radius:11px;margin:19px 0 15px}
+.export-guide h3{font-size:17px;margin:0 0 12px;color:#e6ffff}
+.export-shortcuts{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.export-shortcuts .source-link{border:1px solid #3f7f86;border-radius:9px;background:#0e2932;padding:12px 13px;display:inline-flex;align-items:center;color:#dff8f8;font-size:13px;font-weight:740;line-height:1.35;min-height:43px}
+.export-shortcuts .source-link-main{background:#25c7c2;color:#03272c;border-color:#25c7c2;font-weight:850}
+.export-shortcuts .source-link:hover{background:#174750;text-decoration:none}
+.export-shortcuts .source-link-main:hover{background:#5fddd7;color:#04262b}
+.export-steps{padding-left:22px;margin:14px 0 10px;line-height:1.55;font-size:13px;color:#daeff2}
+.export-steps li+li{margin-top:5px}
+.export-caveat{font-size:12px;line-height:1.55;background:#10242f;border-left:3px solid #4ba9ad;padding:9px 12px;color:#b9d4db;margin:13px 0 1px}
+@media (max-width:600px){.export-guide{padding:13px}.export-shortcuts{flex-direction:column}.export-shortcuts .source-link{width:100%}}

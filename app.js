@@ -3,7 +3,9 @@
   const CHANNEL='UCVlkGKFKA7mRI5zv8fhnjQA';
   const SCOPE='https://www.googleapis.com/auth/youtube.force-ssl';
   // Client ID jest publiczny i przypisany do domeny w Google Cloud. Nigdy nie umieszczaj tutaj Client Secret ani klucza API.
-  const BUILTIN_CLIENT_ID='425024576216-s62ilp1k7hkeb5247s875fnq9q3dg5os.apps.googleusercontent.com';
+  const BUILTIN_CLIENT_ID='425024576216-s62ilp1k7hkeb5247s875fhq9q3dg5os.apps.googleusercontent.com';
+  // Literówka w wersji 1.2 (n zamiast h) powodowała błąd 401 invalid_client na nowych urządzeniach.
+  const LEGACY_BAD_CLIENT_ID='425024576216-s62ilp1k7hkeb5247s875fnq9q3dg5os.apps.googleusercontent.com';
   const $=id=>document.getElementById(id);
   const KEY='djseba_gis_client_id_v09';
   const SKIP='djseba_skipped_v09';
@@ -49,7 +51,13 @@
     return data;
   }
   async function connect(){
-    const clientId=($('client-id').value||'').trim()||BUILTIN_CLIENT_ID;
+    let clientId=($('client-id').value||'').trim()||BUILTIN_CLIENT_ID;
+    // Odporność na błąd klienta ze starszej wersji lub zapamiętane ustawienia przeglądarki.
+    if(clientId===LEGACY_BAD_CLIENT_ID){
+      clientId=BUILTIN_CLIENT_ID;
+      $('client-id').value=BUILTIN_CLIENT_ID;
+      try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
+    }
     if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId)) {switchTab('settings');toast('Zapisz Client ID z Google Cloud (końcówka .apps.googleusercontent.com).');return;}
     if(location.protocol==='file:'){notice('Google OAuth nie działa poprawnie z pliku file://. Opublikuj stronę na GitHub Pages (HTTPS) albo uruchom na localhost.', 'error');switchTab('settings');return;}
     if(!window.google?.accounts?.oauth2){toast('Biblioteka Google jest niedostępna. Sprawdź internet i blokery skryptów.');return;}
@@ -447,10 +455,22 @@
   }
 
   function init(){
-    // Wykorzystujemy ustawienie z v0.9, a na nowych urządzeniach bez pytania wpisujemy publiczny Client ID.
-    $('client-id').value=localStorage.getItem(KEY)||BUILTIN_CLIENT_ID;
+    // Przenieś zapisane ustawienie z błędnej wersji 1.2 bez usuwania historii CSV ani komentarzy.
+    let storedClientId='';
+    try { storedClientId=localStorage.getItem(KEY)||''; } catch {}
+    const fixedLegacyId=storedClientId===LEGACY_BAD_CLIENT_ID;
+    if(fixedLegacyId){
+      storedClientId=BUILTIN_CLIENT_ID;
+      try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
+    }
+    $('client-id').value=storedClientId||BUILTIN_CLIENT_ID;
     $('origin').textContent=location.origin==='null'?'https://NAZWA.github.io':location.origin;
-    $('save-config').addEventListener('click',()=>{const cid=$('client-id').value.trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(cid)){toast('Client ID ma niepoprawny format.');return;}localStorage.setItem(KEY,cid);toast('Client ID zapisany wyłącznie w tej przeglądarce.');});
+    $('save-config').addEventListener('click',()=>{const cid=$('client-id').value.trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(cid)){toast('Client ID ma niepoprawny format.');return;}try {localStorage.setItem(KEY,cid);} catch(e) {toast('Przeglądarka blokuje zapis ustawień. ID będzie działał w tej karcie.');return;}toast('Client ID zapisany wyłącznie w tej przeglądarce.');});
+    $('reset-client-id').addEventListener('click',()=>{
+      $('client-id').value=BUILTIN_CLIENT_ID;
+      try { localStorage.setItem(KEY,BUILTIN_CLIENT_ID); } catch {}
+      toast('Przywrócono prawidłowy identyfikator Google dla DJ SEBA. Kliknij „Połącz Google / YouTube”.');
+    });
     $('check-all').addEventListener('click',checkVisible);
     $('play-csv').addEventListener('change',async e=>{pendingPlay=[];for(const f of e.target.files){try{if(f.size>10000000)throw Error('Plik jest większy niż 10 MB.');pendingPlay.push(parsePlayFile(f,await readCSVFile(f)));}catch(err){toast(f.name+': '+err.message)}}setupNextPlay();e.target.value='';});
     $('play-confirm').addEventListener('click',commitPlay);$('play-cancel').addEventListener('click',()=>{pendingPlay=[];setupNextPlay()});
@@ -471,7 +491,7 @@
     $('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;if(file.size>4000000){toast('Maksymalny rozmiar CSV to 4 MB.');return;}try{const d=parseCsv(await file.text());for(const s of d){const i=songs.findIndex(x=>x.title===s.title);i>=0?songs[i]=s:songs.push(s);}saveSongs();renderSongs();$('csv-info').textContent=`Zaimportowano ${d.length} utworów z ${file.name}${/1year|12month|rok|year/i.test(file.name)?' (zakres: 12 miesięcy)':''}. Dane zapisano lokalnie w tej przeglądarce.`;toast('Import Spotify zakończony.');}catch(ex){toast('Import CSV: '+ex.message)}e.target.value='';});
     $('export-stats').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),songs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DJ_SEBA_Spotify_kopia.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
     authState();renderComments();renderSongs();renderPlay();renderDistro();
-    if(location.protocol!=='file:')notice('Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');
+    if(location.protocol!=='file:')notice(fixedLegacyId?'Wykryto i poprawiono stary błędny identyfikator Google OAuth. Kliknij „Połącz Google / YouTube”.':'Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');
     if(location.protocol==='file:')notice('To lokalny podgląd. Aby zalogować Google, opublikuj pliki na GitHub Pages (HTTPS).','error');
   }
   document.addEventListener('DOMContentLoaded',init);

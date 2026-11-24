@@ -264,6 +264,14 @@
     saveSkips();renderComments();
     return check;
   }
+  function clearReplyAfterHandled(expectedId){
+    // W czasie zapytania nie kasujemy ewentualnego nowego wyboru użytkownika.
+    if(selected!==expectedId)return;
+    selected='';
+    $('reply-text').value='';
+    $('thanks-hint').textContent='Kliknięcie przygotuje podziękowanie; kolejny klik da inną propozycję.';
+    // renderComments -> renderDetails ukryje reply-view i pokaże reply-empty.
+  }
   async function sendReply(){
     const c=commentMap.get(selected);if(!c||!logged)return;
     const text=$('reply-text').value.trim();
@@ -273,11 +281,23 @@
     notice('Sprawdzam, czy odpowiedź nie została już wysłana…');
     try{
       const already=await checkOne(c.id);
-      if(already){notice('Ten komentarz ma już odpowiedź DJ SEBA w YouTube. Nie wysłano duplikatu.','ok');return;}
+      if(already){
+        // Inna sesja lub YouTube Studio mogły już opublikować odpowiedź.
+        // Nie wysyłamy duplikatu. Czyścimy panel tylko jeśli wciąż dotyczy tego komentarza.
+        clearReplyAfterHandled(c.id);
+        renderComments();
+        notice('Ten komentarz ma już odpowiedź DJ SEBA w YouTube. Nie wysłano duplikatu.','ok');
+        return;
+      }
       const result=await youtube('comments',{part:'snippet'},{method:'POST',body:{snippet:{parentId:c.id,textOriginal:text}}});
       if(!result.id)throw Error('YouTube nie potwierdził publikacji odpowiedzi.');
-      c.answered=true;skipped.delete(c.id);saveSkips();renderComments();
-      notice('Odpowiedź została opublikowana na YouTube.','ok');toast('Wysłano odpowiedź DJ SEBA!');
+      c.answered=true;skipped.delete(c.id);saveSkips();
+      // Zniknięcie starej odpowiedzi i komentarza dopiero PO potwierdzeniu API.
+      // Przy błędzie lub anulowaniu tekst pozostaje nienaruszony.
+      clearReplyAfterHandled(c.id);
+      renderComments();
+      notice('Odpowiedź została opublikowana na YouTube. Możesz wybrać kolejny komentarz.','ok');
+      toast('Wysłano odpowiedź DJ SEBA!');
     }catch(e){notice('Nie udało się wysłać: '+e.message,'error');}
     finally{renderDetails();}
   }

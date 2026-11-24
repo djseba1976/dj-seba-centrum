@@ -2,12 +2,15 @@
 (() => {
   const CHANNEL='UCVlkGKFKA7mRI5zv8fhnjQA';
   const SCOPE='https://www.googleapis.com/auth/youtube.force-ssl';
+  // Client ID jest publiczny i przypisany do domeny w Google Cloud. Nigdy nie umieszczaj tutaj Client Secret ani klucza API.
+  const BUILTIN_CLIENT_ID='425024576216-s62ilp1k7hkeb5247s875fnq9q3dg5os.apps.googleusercontent.com';
   const $=id=>document.getElementById(id);
   const KEY='djseba_gis_client_id_v09';
   const SKIP='djseba_skipped_v09';
   const SONGS='djseba_spotify_v09';
   let token='', tokenExpires=0, logged=false, commentMap=new Map(), pageToken='', pages=0, historyComplete=false, selected='', filter='new';
   let videoTitles=new Map();
+  const thanksCounts=new Map();
   let skipped=new Set();
   let songs=[];
   let playReports=[], distroRows=[];
@@ -46,7 +49,7 @@
     return data;
   }
   async function connect(){
-    const clientId=($('client-id').value||'').trim();
+    const clientId=($('client-id').value||'').trim()||BUILTIN_CLIENT_ID;
     if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId)) {switchTab('settings');toast('Zapisz Client ID z Google Cloud (końcówka .apps.googleusercontent.com).');return;}
     if(location.protocol==='file:'){notice('Google OAuth nie działa poprawnie z pliku file://. Opublikuj stronę na GitHub Pages (HTTPS) albo uruchom na localhost.', 'error');switchTab('settings');return;}
     if(!window.google?.accounts?.oauth2){toast('Biblioteka Google jest niedostępna. Sprawdź internet i blokery skryptów.');return;}
@@ -131,7 +134,103 @@
     $('older').disabled=!logged||!pageToken; $('check-all').disabled=!logged||commentMap.size===0;
     renderDetails();
   }
-  function suggestions(c){const q=(c.body+' '+c.videoTitle).toLowerCase();
+  // Kategorie rozpoznajemy z komentarza, a przy wrażliwych utworach także z tytułu.
+  // Bez AI, bez wysyłki automatycznej. Przycisk wyłącznie podsuwa tekst do edycji.
+  function emojiCategory(c){
+    const msg=String(c.body||'').trim();
+    const title=String(c.videoTitle||'').toLocaleLowerCase('pl');
+    const sensitiveTrack=/córeczk|córeczko|tęsk|anioł|pożegnan|zanim się spotkali|serce dla|zawsze będziesz/.test(title);
+    if(sensitiveTrack || /😢|😭|😔|😞|🥺|💔|🕯|🙏/.test(msg))return 'delicate';
+    if(/😂|🤣|😆|😹|😅|😜|😁/.test(msg))return 'laugh';
+    if(/💃|🕺|🔥|🎧|🎶|🎵|🔊|⚡|🥳|🎉|🚀/.test(msg))return 'dance';
+    if(/❤️|❤|♥|💖|💗|💕|💓|💞|💝|🫶|😍|🥰|😘/.test(msg))return 'heart';
+    if(/👏|🙌|👍|💪|👌|🤟/.test(msg))return 'applause';
+    if(/😊|🙂|😃|😄|😀|😎|🤩|☺/.test(msg))return 'smile';
+    return 'general';
+  }
+  const THANKS_TEXTS={
+    delicate:[
+      'Dziękuję za Twoją wrażliwość i obecność. ❤️',
+      'Dziękuję za tę reakcję. Takie gesty naprawdę wiele znaczą. ❤️',
+      'Bardzo dziękuję za okazane serce. ❤️',
+      'Ciepło dziękuję za wysłuchanie i ten znak. 🫶',
+      'Dziękuję. Są utwory, przy których emocje mówią więcej niż słowa. ❤️',
+      'Dziękuję za wspólne przeżywanie tej muzyki. ❤️'
+    ],
+    laugh:[
+      'Cieszę się, że wywołało uśmiech! 😂 Dzięki za reakcję!',
+      'No i o taki dobry humor chodziło! 😄 Dzięki!',
+      'Ha, uśmiech poszedł dalej! 😁 Dzięki za słuchanie!',
+      'Takie reakcje poprawiają dzień! 😂 Pozdrawiam!',
+      'Śmiech to też świetny rytm! 😄 Dzięki za komentarz!',
+      'Dzięki za dawkę dobrego humoru! 🤣🎶'
+    ],
+    dance:[
+      'Dzięki za energię! 🕺🔥 Niech muzyka gra dalej! 🎶',
+      'Takie reakcje napędzają do działania! 🔥 Dzięki za słuchanie!',
+      'Cieszę się, że rytm porwał! 💃🎧 Pozdrawiam!',
+      'Dzięki! 🔊 Niech dobry bas towarzyszy Ci dalej! 😎',
+      'Ale energia! 🎶🔥 Wielkie dzięki za ten znak!',
+      'Dzięki za wspólny muzyczny klimat! 🎧🙌'
+    ],
+    heart:[
+      'Dziękuję za serduszka! ❤️ Miło, że muzyka trafia do Ciebie.',
+      'Tyle serca w jednym komentarzu! 🫶 Bardzo dziękuję!',
+      'Dziękuję za ciepłą reakcję! ❤️🎶',
+      'Pięknie dziękuję za te serca! ❤️ Pozdrawiam serdecznie!',
+      'Ogromnie mi miło! ❤️ Dzięki za słuchanie!',
+      'Takie serduszka mówią wiele. ❤️ Dziękuję!'
+    ],
+    applause:[
+      'Dziękuję za wsparcie i wielki kciuk w górę! 👍🎶',
+      'Brawa od słuchaczy to najlepsza motywacja! 👏 Dzięki!',
+      'Wielkie dzięki za pozytywną reakcję! 🙌',
+      'Dzięki! 💪 Cieszę się, że kawałek się podoba.',
+      'Dzięki za znak uznania! 👍 Pozdrawiam!',
+      'Miło dostać takie wsparcie! 👏🎧 Dzięki!'
+    ],
+    smile:[
+      'Dzięki za uśmiech! 😊 Niech muzyka umila dzień!',
+      'Ale miło zobaczyć taką reakcję! 😄 Dziękuję!',
+      'Uśmiech wraca do Ciebie! 😊🎶 Dzięki za słuchanie!',
+      'Dzięki za dobrą energię! 😎 Pozdrawiam!',
+      'Cieszę się, że ten utwór wywołuje uśmiech! 🙂',
+      'Bardzo dziękuję za pozytywny znak! 🎧😊'
+    ],
+    general:[
+      'Dziękuję za komentarz i za słuchanie! 🎶',
+      'Bardzo mi miło! Dzięki za poświęcony czas. 🎧',
+      'Dzięki za odezwanie się! Serdecznie pozdrawiam! 😊',
+      'Miło, że jesteś tutaj z muzyką DJ SEBA. Dzięki! 🎵',
+      'Dziękuję za wsparcie! Niech muzyka gra dalej. 🎶',
+      'Wielkie dzięki za reakcję! Pozdrawiam! 🙌'
+    ]
+  };
+  function reactionOptions(c){return THANKS_TEXTS[emojiCategory(c)]}
+  function stableOffset(c,n){
+    let hash=0;for(const ch of String(c.id||c.author||''))hash=(hash*31+ch.codePointAt(0))>>>0;
+    return hash % n;
+  }
+  function thankForComment(){
+    const c=commentMap.get(selected);
+    if(!c){toast('Najpierw wybierz komentarz.');return;}
+    if(c.answered){toast('Ten komentarz ma już Twoją odpowiedź.');return;}
+    const pool=reactionOptions(c), count=thanksCounts.get(c.id)||0;
+    const text=pool[(stableOffset(c,pool.length)+count)%pool.length];
+    thanksCounts.set(c.id,count+1);
+    $('reply-text').value=text;
+    $('reply-text').focus();
+    $('thanks-hint').textContent='Propozycja '+(count%pool.length+1)+'/'+pool.length+' · Kliknij ponownie, by otrzymać inną. Możesz edytować przed wysłaniem.';
+    toast('Przygotowano podziękowanie – nic nie zostało wysłane.');
+  }
+  function suggestions(c){
+    const msg=String(c.body||'').trim();
+    // Przy komentarzu z samych ikon nie używamy przypadkowo słów z tytułu utworu.
+    if(/\p{Extended_Pictographic}/u.test(msg) && !/[\p{L}\p{N}]/u.test(msg)){
+      const p=reactionOptions(c),offset=stableOffset(c,p.length);
+      return [p[offset],p[(offset+1)%p.length],p[(offset+2)%p.length]];
+    }
+    const q=(c.body+' '+c.videoTitle).toLowerCase();
     if(/córeczk|córeczko|tęsk|anioł|łz|serc|brakuj|wspomnien|wspomnień/.test(q))return [
       'Dziękuję za te ciepłe słowa. ❤️ To dla mnie bardzo ważny utwór.',
       'Bardzo dziękuję. ❤️ Muzyka czasem wyraża to, czego nie da się powiedzieć słowami.',
@@ -142,7 +241,7 @@
       'Dzięki za wsparcie! Niech dobry rytm gra jak najdłużej! 🎧🙌'];
     return ['Bardzo dziękuję za tak miłe słowa! 🎶 Serdecznie pozdrawiam!','Cieszę się, że utwór się podoba. Dzięki za odsłuch! ❤️🎵','Dzięki za komentarz i pozytywną energię! 🎧'];
   }
-  function selectComment(id){selected=id;$('reply-text').value='';renderComments();}
+  function selectComment(id){selected=id;$('reply-text').value='';$('thanks-hint').textContent='Kliknięcie przygotuje podziękowanie; kolejny klik da inną propozycję.';renderComments();}
   function renderDetails(){
     const c=commentMap.get(selected);$('reply-empty').hidden=Boolean(c);$('reply-view').hidden=!c;
     if(!c)return;
@@ -152,6 +251,7 @@
     $('d-state').textContent=status(c)==='answered'?'✓ Odpowiedziano na YouTube':status(c)==='unknown'?'Nie udało się całkowicie sprawdzić odpowiedzi':status(c)==='skipped'?'Pominięto w tej przeglądarce':'Oczekuje na Twoją odpowiedź';
     const suggestionsEl=$('suggestions');suggestionsEl.replaceChildren();
     for(const s of suggestions(c)){const b=el('button','suggestion',s);b.addEventListener('click',()=>{$('reply-text').value=s;toast('Propozycja wpisana. Możesz ją edytować.')});suggestionsEl.append(b);}
+    $('thanks').disabled=c.answered||c.unknown;
     $('send').disabled=!logged||c.answered||c.unknown;
     $('skip').disabled=c.answered;
     $('skip').textContent=skipped.has(c.id)?'Przywróć z pominiętych':'Pomiń lokalnie';
@@ -327,7 +427,8 @@
   }
 
   function init(){
-    $('client-id').value=localStorage.getItem(KEY)||'';
+    // Wykorzystujemy ustawienie z v0.9, a na nowych urządzeniach bez pytania wpisujemy publiczny Client ID.
+    $('client-id').value=localStorage.getItem(KEY)||BUILTIN_CLIENT_ID;
     $('origin').textContent=location.origin==='null'?'https://NAZWA.github.io':location.origin;
     $('save-config').addEventListener('click',()=>{const cid=$('client-id').value.trim();if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(cid)){toast('Client ID ma niepoprawny format.');return;}localStorage.setItem(KEY,cid);toast('Client ID zapisany wyłącznie w tej przeglądarce.');});
     $('check-all').addEventListener('click',checkVisible);
@@ -342,6 +443,7 @@
     document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c===b));renderComments()}));
     $('refresh').addEventListener('click',()=>loadComments(false));$('older').addEventListener('click',()=>loadComments(true));$('search').addEventListener('input',renderComments);
     $('send').addEventListener('click',sendReply);
+    $('thanks').addEventListener('click',thankForComment);
     $('verify').addEventListener('click',async()=>{if(!selected||!logged)return;try{const result=await checkOne(selected);toast(result?'Odpowiedź DJ SEBA istnieje na YouTube.':'Nie znaleziono odpowiedzi DJ SEBA.');}catch(e){toast('Weryfikacja: '+e.message)}});
     $('skip').addEventListener('click',()=>{if(!selected)return;const c=commentMap.get(selected);if(!c||c.answered)return;skipped.has(selected)?skipped.delete(selected):skipped.add(selected);saveSkips();renderComments();});
     $('copy-prompt').addEventListener('click',async()=>{const c=commentMap.get(selected);if(!c)return;const q=`Przygotuj 3 krótkie, naturalne, indywidualne odpowiedzi DJ SEBA na komentarz YouTube. Tytuł utworu: ${c.videoTitle}. Komentarz: ${c.body}. Dopasuj ton do emocji utworu. Bez autopromocji i bez zmyślania.`;try{await navigator.clipboard.writeText(q);toast('Pytanie skopiowane do ChatGPT.');}catch{toast('Przeglądarka nie pozwala kopiować. Użyj HTTPS.')}});
@@ -349,6 +451,7 @@
     $('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;if(file.size>4000000){toast('Maksymalny rozmiar CSV to 4 MB.');return;}try{const d=parseCsv(await file.text());for(const s of d){const i=songs.findIndex(x=>x.title===s.title);i>=0?songs[i]=s:songs.push(s);}saveSongs();renderSongs();$('csv-info').textContent=`Zaimportowano ${d.length} utworów z ${file.name}${/1year|12month|rok|year/i.test(file.name)?' (zakres: 12 miesięcy)':''}. Dane zapisano lokalnie w tej przeglądarce.`;toast('Import Spotify zakończony.');}catch(ex){toast('Import CSV: '+ex.message)}e.target.value='';});
     $('export-stats').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),songs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DJ_SEBA_Spotify_kopia.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
     authState();renderComments();renderSongs();renderPlay();renderDistro();
+    if(location.protocol!=='file:')notice('Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');
     if(location.protocol==='file:')notice('To lokalny podgląd. Aby zalogować Google, opublikuj pliki na GitHub Pages (HTTPS).','error');
   }
   document.addEventListener('DOMContentLoaded',init);

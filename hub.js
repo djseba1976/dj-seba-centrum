@@ -1,8 +1,21 @@
 'use strict';
-/* DJ SEBA Centrum Artysty v1.5 – additive module. Does not replace v1.4 localStorage keys. */
+/* DJ SEBA Centrum Artysty v1.7 – sortowanie YouTube; zachowanie danych v1.4/v1.5. */
 (() => {
   const $ = id => document.getElementById(id);
   const HUB_KEY='djseba_hub_v15';
+  // Osobna preferencja interfejsu: nie zmieniamy formatu zapisanych danych statystyk.
+  const YT_SORT_KEY='djseba_youtube_video_sort_v17';
+  const YT_SORT_OPTIONS=[
+    ['published_desc','Data publikacji: najnowsze'],
+    ['published_asc','Data publikacji: najstarsze'],
+    ['views_desc','Wyświetlenia: najwięcej'],
+    ['views_asc','Wyświetlenia: najmniej'],
+    ['comments_desc','Komentarze: najwięcej'],
+    ['comments_asc','Komentarze: najmniej']
+  ];
+  let ytVideoSort='published_desc';
+  try{const v=localStorage.getItem(YT_SORT_KEY);if(YT_SORT_OPTIONS.some(x=>x[0]===v))ytVideoSort=v;}catch{}
+
   const PLATFORMS=['youtube','spotify','facebook','instagram','tiktok'];
   const LABEL={youtube:'YouTube',spotify:'Spotify',facebook:'Facebook',instagram:'Instagram',tiktok:'TikTok'};
   const fmt=n=>(n!==null&&n!==undefined&&n!==''&&Number.isFinite(Number(n)))?Number(n).toLocaleString('pl-PL'):'—';
@@ -180,17 +193,52 @@
     for(const [i,p] of coordinates.entries())s('circle',{cx:p.x,cy:p.y,r:limited.length<=20?3:2,fill:'#20d1c6'});
     s('text',{x:px,y:H-4,fill:'#9cbecb','font-size':11},limited[0].at.slice(0,10));s('text',{x:W-px,y:H-4,fill:'#9cbecb','font-size':11,'text-anchor':'end'},limited[limited.length-1].at.slice(0,10));container.append(svg)
   }
-  function renderPlatformEditor(platform){const root=document.querySelector(`[data-hub-platform="${platform}"]`);if(!root)return;const isTik=platform==='tiktok';root.innerHTML=`<div class="hub-row hub-wrap hub-actions"><label class="hub-upload">Importuj CSV / Excel<input type="file" accept=".csv,.xlsx,.xls" multiple data-import="${platform}"></label><button class="ghost" data-manual="${platform}" type="button">+ Dodaj film / wpis</button><button class="ghost" data-account="${platform}" type="button">+ Liczba obserwujących</button><button class="ghost" data-export="${platform}" type="button">↓ Eksport CSV</button></div><div class="hub-box hub-manual" id="hub-form-${platform}" hidden><h3>Dodaj lub zaktualizuj publikację</h3><div class="hub-form-grid"><label>Tytuł / opis<input name="title" maxlength="300" required></label><label>ID publikacji (opcjonalnie)<input name="id" maxlength="160"></label><label>Data publikacji<input type="date" name="published"></label><label>Bezpośredni link<input type="url" name="link" placeholder="https://..."></label><label>Miniatura (URL)<input type="url" name="thumb" placeholder="https://..."></label><label>Wyświetlenia<input type="number" min="0" name="views"></label><label>Polubienia / reakcje<input type="number" min="0" name="likes"></label><label>Komentarze<input type="number" min="0" name="comments"></label><label>Udostępnienia<input type="number" min="0" name="shares"></label><label>Zasięg<input type="number" min="0" name="reach"></label></div><div class="hub-row hub-wrap"><button class="primary" type="button" data-save="${platform}">Zapisz pomiar</button><button class="ghost" type="button" data-hide="${platform}">Anuluj</button></div></div><div class="hub-grid four" id="hub-metrics-${platform}"></div><div class="hub-box"><div class="hub-row hub-between"><h3>Publikacje i ich statystyki</h3><small id="hub-meta-${platform}" class="muted">Brak pomiarów</small></div><div class="hub-search-row"><input type="search" id="hub-search-${platform}" placeholder="Filtruj filmy i posty..." aria-label="Szukaj publikacji"></div><div id="hub-list-${platform}"></div></div><div class="hub-box"><h3>Historia pomiarów wyświetleń</h3><div id="hub-chart-${platform}" class="hub-chart"></div><p class="muted hub-small">Przyrost wyliczamy z dwóch lub więcej pomiarów, nie z jednej wartości.</p></div>`;
+  function renderPlatformEditor(platform){const root=document.querySelector(`[data-hub-platform="${platform}"]`);if(!root)return;const isTik=platform==='tiktok';
+    const youtubeSort=platform==='youtube'?`<div class="hub-youtube-sort"><label for="hub-sort-youtube">Sortuj filmy<select id="hub-sort-youtube" aria-label="Sortowanie filmów YouTube">${YT_SORT_OPTIONS.map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></label><small class="muted" id="hub-sort-count-youtube" aria-live="polite"></small><small class="muted">Daty to daty publikacji udostępniane przez YouTube. Liczba komentarzy dotyczy filmu, nie komentarzy oczekujących na odpowiedź. Brakujące wartości zawsze na końcu.</small></div>`:'';
+    root.innerHTML=`<div class="hub-row hub-wrap hub-actions"><label class="hub-upload">Importuj CSV / Excel<input type="file" accept=".csv,.xlsx,.xls" multiple data-import="${platform}"></label><button class="ghost" data-manual="${platform}" type="button">+ Dodaj film / wpis</button><button class="ghost" data-account="${platform}" type="button">+ Liczba obserwujących</button><button class="ghost" data-export="${platform}" type="button">↓ Eksport CSV</button></div><div class="hub-box hub-manual" id="hub-form-${platform}" hidden><h3>Dodaj lub zaktualizuj publikację</h3><div class="hub-form-grid"><label>Tytuł / opis<input name="title" maxlength="300" required></label><label>ID publikacji (opcjonalnie)<input name="id" maxlength="160"></label><label>Data publikacji<input type="date" name="published"></label><label>Bezpośredni link<input type="url" name="link" placeholder="https://..."></label><label>Miniatura (URL)<input type="url" name="thumb" placeholder="https://..."></label><label>Wyświetlenia<input type="number" min="0" name="views"></label><label>Polubienia / reakcje<input type="number" min="0" name="likes"></label><label>Komentarze<input type="number" min="0" name="comments"></label><label>Udostępnienia<input type="number" min="0" name="shares"></label><label>Zasięg<input type="number" min="0" name="reach"></label></div><div class="hub-row hub-wrap"><button class="primary" type="button" data-save="${platform}">Zapisz pomiar</button><button class="ghost" type="button" data-hide="${platform}">Anuluj</button></div></div><div class="hub-grid four" id="hub-metrics-${platform}"></div><div class="hub-box"><div class="hub-row hub-between"><h3>Publikacje i ich statystyki</h3><small id="hub-meta-${platform}" class="muted">Brak pomiarów</small></div><div class="hub-search-row"><input type="search" id="hub-search-${platform}" placeholder="Filtruj filmy i posty..." aria-label="Szukaj publikacji"></div>${youtubeSort}<div id="hub-list-${platform}"></div></div><div class="hub-box"><h3>Historia pomiarów wyświetleń</h3><div id="hub-chart-${platform}" class="hub-chart"></div><p class="muted hub-small">Przyrost wyliczamy z dwóch lub więcej pomiarów, nie z jednej wartości.</p></div>`;
     root.querySelector(`[data-import="${platform}"]`).addEventListener('change',async e=>{await importFiles(platform,[...e.target.files]);e.target.value=''});
     root.querySelector(`[data-manual="${platform}"]`).addEventListener('click',()=>{$(`hub-form-${platform}`).hidden=false});
     root.querySelector(`[data-hide="${platform}"]`).addEventListener('click',()=>{$(`hub-form-${platform}`).hidden=true});
     root.querySelector(`[data-save="${platform}"]`).addEventListener('click',()=>{const box=$(`hub-form-${platform}`),fields=Object.fromEntries([...box.querySelectorAll('[name]')].map(x=>[x.name,x.value]));if(!fields.title.trim()){message('Wpisz tytuł publikacji.',false);return}for(const k of ['views','likes','comments','shares','reach'])fields[k]=number(fields[k]);fields.id=fields.id||fields.link||fields.title;try{upsert(platform,fields);box.hidden=true;box.querySelectorAll('input').forEach(x=>x.value='');renderAll();message('Zapisano '+LABEL[platform]+' – ręczny pomiar.')}catch(e){message(e.message,false)}});
     root.querySelector(`[data-account="${platform}"]`).addEventListener('click',()=>{const n=prompt('Aktualna liczba obserwujących na '+LABEL[platform]+' (wartość z panelu platformy):');if(n===null)return;const v=number(n);if(v===null||v<0){message('Podaj nieujemną liczbę.',false);return}setAccount(platform,v,'Wpis ręczny');renderAll()});
     root.querySelector(`[data-export="${platform}"]`).addEventListener('click',()=>{const rows=[['ID','Tytuł','Data','Link','Miniatura','Wyświetlenia','Polubienia','Komentarze','Udostępnienia','Zasięg','Źródło','Ostatni pomiar'],...(state.entries[platform]||[]).map(x=>[x.id,x.title,x.published,x.link,x.thumb,x.views??'',x.likes??'',x.comments??'',x.shares??'',x.reach??'',x.source,x.updated])];download('\ufeff'+rows.map(r=>r.map(csvQuote).join(';')).join('\r\n'),'DJ_SEBA_'+platform+'_'+day()+'.csv','text/csv;charset=utf-8')});
+    if(platform==='youtube'){
+      const select=$('hub-sort-youtube');select.value=ytVideoSort;
+      select.addEventListener('change',()=>{
+        if(!YT_SORT_OPTIONS.some(x=>x[0]===select.value))return;
+        ytVideoSort=select.value;
+        try{localStorage.setItem(YT_SORT_KEY,ytVideoSort)}catch{}
+        renderPlatform('youtube');
+      });
+    }
     $(`hub-search-${platform}`).addEventListener('input',()=>renderPlatform(platform));
   }
+  function sortYoutubeVideos(a,b){
+    const [field,direction]=ytVideoSort.split('_');
+    const key=field==='views'?'views':field==='comments'?'comments':'published';
+    const extract=x=>key==='published'?(x.published||''):isFiniteNumber(x[key])?Number(x[key]):null;
+    const x=extract(a),y=extract(b);
+    const missingX=x===null||x==='',missingY=y===null||y==='';
+    // Nieważne, czy rosnąco, czy malejąco: nieznane liczniki/daty zawsze na końcu.
+    if(missingX!==missingY)return missingX?1:-1;
+    if(!missingX){
+      const diff=key==='published'?String(x).localeCompare(String(y)):x-y;
+      if(diff)return direction==='asc'?diff:-diff;
+    }
+    // Remis: nowe filmy najpierw, następnie stabilnie po tytule i ID.
+    const da=a.published||'',db=b.published||'';
+    if(da!==db)return !da?1:!db?-1:db.localeCompare(da);
+    const t=String(a.title||'').localeCompare(String(b.title||''),'pl',{sensitivity:'base'});
+    return t||String(a.id||'').localeCompare(String(b.id||''));
+  }
   function renderPlatform(platform){const n=numbers(platform),labels=[['Wyświetlenia',n.views],['Polubienia',n.likes],[platform==='youtube'?'Subskrybenci':'Obserwujący',n.followers],['Publikacje',n.posts]];$(`hub-metrics-${platform}`).innerHTML=labels.map(x=>`<div class="hub-kpi"><b>${fmt(x[1])}</b><small>${x[0]}</small></div>`).join('');$(`hub-meta-${platform}`).textContent='Ostatni pomiar: '+reportStamp(platform);
-    const query=norm($(`hub-search-${platform}`).value),list=$(`hub-list-${platform}`),items=[...(state.entries[platform]||[])].sort((a,b)=>(b.updated||'').localeCompare(a.updated||'')).filter(x=>norm(x.title).includes(query));list.replaceChildren();
+    const query=norm($(`hub-search-${platform}`).value),list=$(`hub-list-${platform}`);
+    const items=[...(state.entries[platform]||[])].filter(x=>norm(x.title).includes(query));
+    if(platform==='youtube'){
+      items.sort(sortYoutubeVideos);
+      $('hub-sort-count-youtube').textContent=`Wyświetlane: ${fmt(items.length)} z ${fmt((state.entries.youtube||[]).length)} filmów`;
+    }else items.sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+    list.replaceChildren();
     if(!items.length){list.append(text('p','Nie ma pasujących publikacji. Zaimportuj plik CSV/Excel lub dodaj pierwszy wpis.','muted'));}
     for(const x of items){const wrap=text('div','','hub-entry');const thumb=x.thumb?safeUrl(x.thumb):'';if(thumb){const img=document.createElement('img');img.src=thumb;img.alt='Miniatura';img.loading='lazy';img.referrerPolicy='no-referrer';wrap.append(img)}
       const body=text('div','','hub-entry-body'),title=text('b',x.title);body.append(title,text('small',`${x.published||'Bez daty'} • ${x.source} • ${x.updated?.slice(0,10)||'—'}`,'muted'));

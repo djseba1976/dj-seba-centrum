@@ -27,3 +27,10 @@
 .yt-heading p{margin:5px 0}
 .yt-subpanel[hidden]{display:none!important}
 @media(max-width:520px){.yt-switcher{flex-direction:column}.yt-view-btn{width:100%}.yt-heading{align-items:flex-start}}
+
+/* v1.7 – sortowanie filmów w zakładce YouTube / Filmy i statystyki */
+.hub-youtube-sort{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:4px 0 14px;padding:12px 14px;border:1px solid var(--hub-border);background:#0c2b35;border-radius:12px}
+.hub-youtube-sort label{min-width:230px;flex:0 1 320px;font-size:13px;font-weight:700;color:#d9f8fb}
+.hub-youtube-sort select{width:100%;font-size:14px;margin-top:4px}
+.hub-youtube-sort small{flex:1 1 220px;font-size:11px;line-height:1.45}
+@media(max-width:650px){.hub-youtube-sort{align-items:stretch}.hub-youtube-sort label{min-width:0;flex:1 1 100%}.hub-youtube-sort small{flex:1 1 100%}}

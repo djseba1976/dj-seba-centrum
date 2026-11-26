@@ -1,0 +1,17 @@
+DJ SEBA – Centrum Artysty WEB v1.7
+
+1. W działającej v1.6 pobierz kopię zapasową danych JSON w Ustawienia / pomoc.
+2. Rozpakuj ZIP „PODMIANA_v1_7”.
+3. Otwórz https://github.com/djseba1976/dj-seba-centrum/upload/main
+4. Wgraj 4 pliki Z GŁÓWNEGO KATALOGU ZIP:
+   - index.html
+   - hub.js
+   - hub.css
+   - manifest.webmanifest
+   Zastąp pliki o tych samych nazwach, a następnie Commit changes.
+5. Otwórz https://djseba1976.github.io/ – w nagłówku WEB v1.7.
+6. Połącz YouTube, przejdź YouTube → Filmy i statystyki, użyj pola „Sortuj filmy”.
+   Jeśli nie ma filmów, kliknij „Pobierz statystyki YT”.
+
+Bez ponownej autoryzacji Google Cloud; brak zmian w bazie localStorage.
+W zainstalowanym skrócie Android PWA nowa wersja może wymagać pełnego ponownego otwarcia.

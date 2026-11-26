@@ -1,0 +1,16 @@
+DJ SEBA – Centrum Artysty WEB v1.7 (aktualizacja v1.6)
+
+NOWOŚĆ: YouTube → Filmy i statystyki → Sortuj filmy
+- Data publikacji: najnowsze / najstarsze.
+- Wyświetlenia: najwięcej / najmniej.
+- Komentarze w filmie: najwięcej / najmniej.
+- Brak danych jest zawsze na końcu niezależnie od kierunku.
+- Wyszukiwanie i sortowanie działają łącznie.
+- Ustawienie sortowania jest zachowane po odświeżeniu na tym samym urządzeniu.
+- Data oznacza publikację w YouTube (API snippet.publishedAt), a nie datę utworzenia pliku wideo na dysku.
+
+NIEZMIENIONE: komentarze i wysyłanie odpowiedzi YouTube, login Google OAuth,
+przechowywanie danych z v1.4 / v1.5, Spotify, TikTok, Instagram, Facebook, Finanse.
+
+Podmień: index.html, hub.js, hub.css, manifest.webmanifest.
+Nie zmieniaj app.js ani pozostałych plików.

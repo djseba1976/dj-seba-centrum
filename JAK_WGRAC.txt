@@ -1,0 +1,7 @@
+DJ SEBA – Centrum Artysty v1.5 – podmiana plikow na GitHub Pages
+1. W dzialajacej v1.4 pobierz kopie danych JSON.
+2. W repozytorium dj-seba-centrum, w galaz main i katalogu glownym, wgraj: index.html, app.js, hub.js, hub.css, manifest.webmanifest.
+3. Zachowaj pozostale pliki, szczegolnie style.css, logo.svg, .nojekyll.
+4. Zatwierdz Commit changes i sprawdz WEB v1.5 na https://djseba1976.github.io/.
+5. W razie problemow przywroc poprzednie pliki z GitHub, zachowujac kopie lokalnych danych.
+Nie wgrywaj sekretow ani tokenow.

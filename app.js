@@ -69,6 +69,7 @@
         if(!(channels.items||[]).some(x=>x.id===CHANNEL)){token='';tokenExpires=0;authState();notice('Zalogowane konto Google nie wskazuje kanału DJ SEBA ('+CHANNEL+'). Zmień konto/kanał w autoryzacji Google.', 'error');return;}
         authState();notice('Połączono właściwy kanał DJ SEBA. Możesz pobierać komentarze i publikować zatwierdzone odpowiedzi.', 'ok');
         await loadComments(false);
+        window.DJSEBA_HUB?.refreshYoutubeStats?.().catch(e=>console.warn('Statystyki YouTube:',e.message));
       }catch(e){authState();notice('Nie udało się sprawdzić kanału: '+e.message,'error');}
     }});
     client.requestAccessToken({prompt:'consent'});
@@ -98,6 +99,7 @@
     setBusy(true);
     notice(older?'Pobieram starszą stronę komentarzy…':'Pobieram najnowsze komentarze z YouTube…');
     try{
+      const previousCheck=window.DJSEBA_HUB?.getLastCommentCheck?.()||null;
       const data=await youtube('commentThreads',{part:'snippet,replies',allThreadsRelatedToChannelId:CHANNEL,maxResults:100,order:'time',textFormat:'plainText',...(older?{pageToken}:{})});
       const threads=data.items||[];
       const ids=threads.map(t=>t.snippet?.videoId).filter(Boolean);
@@ -118,6 +120,7 @@
       $('loaded-meta').textContent=`Wczytano ${commentMap.size} komentarzy • ${pages} stron • ${new Date().toLocaleString('pl-PL')}${historyComplete?' • koniec dostępnej historii':' • są starsze'}`;
       notice('Pobrano '+threads.length+' wątków YouTube. '+(pageToken?'Możesz pobrać starsze.':'Osiągnięto koniec dostępnej historii.'),'ok');
       renderComments();
+      window.DJSEBA_HUB?.ingestComments?.([...commentMap.values()],previousCheck,older);
     }catch(e){notice('Nie udało się pobrać komentarzy: '+e.message,'error');}
     finally{setBusy(false)}
   }
@@ -333,6 +336,7 @@
     if(!data.length)throw Error('Brak utworów w pliku.');return data;
   }
   function saveSongs(){localStorage.setItem(SONGS,JSON.stringify(songs));}
+  function upsertSpotifyFromHub(items){for(const s of items){const k=songs.findIndex(x=>x.title===s.title);k>=0?songs[k]={...songs[k],...s}:songs.push(s);}saveSongs();renderSongs();}
   function renderSongs(){
     const count=songs.length,sum=k=>songs.reduce((p,s)=>p+(Number(s[k])||0),0);
     $('s-count').textContent=count;$('s-streams').textContent=sum('streams').toLocaleString('pl-PL');$('s-saves').textContent=sum('saves').toLocaleString('pl-PL');
@@ -430,7 +434,7 @@
       const k=distroRows.findIndex(x=>x.id===entry.id);if(k>=0)distroRows[k]=entry;else distroRows.push(entry);added++;
     }
     if(!added)throw Error('Nie ma poprawnych kwot w raporcie.');
-    localStorage.setItem('djseba_distro_rows_v09',JSON.stringify(distroRows));renderDistro();toast('Zaimportowano '+added+' pozycji DistroKid.');
+    localStorage.setItem('djseba_distro_rows_v09',JSON.stringify(distroRows));renderDistro();window.DJSEBA_HUB?.ingestDistroRows?.(rows.slice(1),h,file.name);toast('Zaimportowano '+added+' pozycji DistroKid.');
   }
   function renderDistro(){const n=distroRows.length, groups=new Map();for(const r of distroRows){const key=r.title+'|'+r.currency;groups.set(key,(groups.get(key)||0)+r.amount)}
     const totals=new Map();for(const r of distroRows){totals.set(r.currency,(totals.get(r.currency)||0)+r.amount)}
@@ -444,15 +448,23 @@
     for(const c of ids){try{if(await hasOwnerReply(c.id,[],1)){c.answered=true;found++;}c.unknown=false;}catch(e){c.unknown=true;errors++;}}
     renderComments();notice(`Weryfikacja: ${found} nowych odpowiedzianych, ${errors} niezweryfikowanych.`,'ok');setBusy(false);
   }
-  function backup(){const obj={kind:'djseba-backup',version:9,created:new Date().toISOString(),songs,playReports,distroRows,skipped:[...skipped]};
+  function backup(){const obj={kind:'djseba-backup',version:15,created:new Date().toISOString(),songs,playReports,distroRows,skipped:[...skipped],hub:window.DJSEBA_HUB?.exportState?.()||null};
     const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DJ_SEBA_Centrum_Artysty_KOPIA_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
-  async function restore(file){if(file.size>5000000)throw Error('Plik za duży (maksymalnie 5 MB).');const d=JSON.parse(await file.text());if(d.kind!=='djseba-backup'||d.version!==9)throw Error('Nieprawidłowa kopia DJ SEBA v0.9.');
+  async function restore(file){if(file.size>5000000)throw Error('Plik za duży (maksymalnie 5 MB).');const d=JSON.parse(await file.text());if(d.kind!=='djseba-backup'||![9,15].includes(d.version))throw Error('Nieprawidłowa kopia DJ SEBA.');
     if(!Array.isArray(d.songs)||!Array.isArray(d.playReports)||!Array.isArray(d.distroRows)||!Array.isArray(d.skipped))throw Error('Niekompletna kopia danych.');
     if(!confirm('Wczytać kopię danych? Zastąpi lokalnie zapisane raporty i oznaczenia pominiętych.'))return;
-    songs=d.songs;playReports=d.playReports;distroRows=d.distroRows;skipped=new Set(d.skipped);saveSongs();saveSkips();localStorage.setItem('djseba_play_reports_v09',JSON.stringify(playReports));localStorage.setItem('djseba_distro_rows_v09',JSON.stringify(distroRows));renderSongs();renderPlay();renderDistro();renderComments();toast('Wczytano kopię danych.');
+    songs=d.songs;playReports=d.playReports;distroRows=d.distroRows;skipped=new Set(d.skipped);saveSongs();saveSkips();localStorage.setItem('djseba_play_reports_v09',JSON.stringify(playReports));localStorage.setItem('djseba_distro_rows_v09',JSON.stringify(distroRows));renderSongs();renderPlay();renderDistro();renderComments();if(d.hub)window.DJSEBA_HUB?.restoreState?.(d.hub);toast('Wczytano kopię danych.');
   }
 
+  window.DJSEBA_CORE={
+    isConnected:()=>Boolean(token&&Date.now()<tokenExpires),
+    channelId:CHANNEL,
+    api:(path,query,opts)=>youtube(path,query,opts),
+    comments:()=>[...commentMap.values()].map(c=>({...c})),
+    upsertSpotify:upsertSpotifyFromHub,
+    exportLegacy:()=>({songs:structuredClone(songs),distroRows:structuredClone(distroRows),playReports:structuredClone(playReports)})
+  };
   function init(){
     // Migracja ID ze starszych instalacji, bez czyszczenia raportów ani historii.
     let storedClientId='';
@@ -485,7 +497,7 @@
     $('skip').addEventListener('click',()=>{if(!selected)return;const c=commentMap.get(selected);if(!c||c.answered)return;skipped.has(selected)?skipped.delete(selected):skipped.add(selected);saveSkips();renderComments();});
     $('copy-prompt').addEventListener('click',async()=>{const c=commentMap.get(selected);if(!c)return;const q=`Przygotuj 3 krótkie, naturalne, indywidualne odpowiedzi DJ SEBA na komentarz YouTube. Tytuł utworu: ${c.videoTitle}. Komentarz: ${c.body}. Dopasuj ton do emocji utworu. Bez autopromocji i bez zmyślania.`;try{await navigator.clipboard.writeText(q);toast('Pytanie skopiowane do ChatGPT.');}catch{toast('Przeglądarka nie pozwala kopiować. Użyj HTTPS.')}});
     $('copy-reply').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('reply-text').value);toast('Odpowiedź skopiowana.');}catch{toast('Kopiowanie niedostępne.')}});
-    $('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;if(file.size>4000000){toast('Maksymalny rozmiar CSV to 4 MB.');return;}try{const d=parseCsv(await file.text());for(const s of d){const i=songs.findIndex(x=>x.title===s.title);i>=0?songs[i]=s:songs.push(s);}saveSongs();renderSongs();$('csv-info').textContent=`Zaimportowano ${d.length} utworów z ${file.name}${/1year|12month|rok|year/i.test(file.name)?' (zakres: 12 miesięcy)':''}. Dane zapisano lokalnie w tej przeglądarce.`;toast('Import Spotify zakończony.');}catch(ex){toast('Import CSV: '+ex.message)}e.target.value='';});
+    $('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;if(file.size>4000000){toast('Maksymalny rozmiar CSV to 4 MB.');return;}try{const d=parseCsv(await file.text());for(const s of d){const i=songs.findIndex(x=>x.title===s.title);i>=0?songs[i]=s:songs.push(s);}saveSongs();renderSongs();window.DJSEBA_HUB?.ingestSpotifyBulk?.(d,file.name);$('csv-info').textContent=`Zaimportowano ${d.length} utworów z ${file.name}${/1year|12month|rok|year/i.test(file.name)?' (zakres: 12 miesięcy)':''}. Dane zapisano lokalnie w tej przeglądarce.`;toast('Import Spotify zakończony.');}catch(ex){toast('Import CSV: '+ex.message)}e.target.value='';});
     $('export-stats').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),songs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DJ_SEBA_Spotify_kopia.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
     authState();renderComments();renderSongs();renderPlay();renderDistro();
     if(location.protocol!=='file:')notice(fixedLegacyId?'Zastąpiono wcześniejsze ustawienie poprawnym identyfikatorem Google OAuth. Kliknij „Połącz Google / YouTube”.':'Client ID ustawiony automatycznie. Kliknij „Połącz Google / YouTube”, aby wczytać komentarze.', 'ok');

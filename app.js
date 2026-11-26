@@ -129,6 +129,7 @@
     const comments=[...commentMap.values()].sort((a,b)=>String(b.published).localeCompare(String(a.published)));
     $('m-all').textContent=comments.length;
     $('m-new').textContent=comments.filter(c=>status(c)==='new').length;
+    $('yt-pending').textContent=comments.filter(c=>status(c)==='new').length;
     $('m-answered').textContent=comments.filter(c=>status(c)==='answered').length;
     $('m-skipped').textContent=comments.filter(c=>status(c)==='skipped').length;
     const txt=$('search').value.toLocaleLowerCase('pl');
@@ -312,7 +313,22 @@
     finally{renderDetails();}
   }
   function saveSkips(){localStorage.setItem(SKIP,JSON.stringify([...skipped]));}
-  function switchTab(name){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('active',e.dataset.tab===name));document.querySelectorAll('.tab-panel').forEach(e=>e.classList.toggle('active',e.id===name));}
+  function switchYoutubeView(view){
+    // Przy otwarciu YouTube pokazujemy komentarze, tak jak w wersji 1.4.
+    const target=view==='stats'?'stats':'comments';
+    for(const button of document.querySelectorAll('[data-yt-view]')){
+      const active=button.dataset.ytView===target;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-pressed',String(active));
+    }
+    $('yt-comments-panel').hidden=target!=='comments';
+    $('yt-stats-panel').hidden=target!=='stats';
+  }
+  function switchTab(name){
+    document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('active',e.dataset.tab===name));
+    document.querySelectorAll('.tab-panel').forEach(e=>e.classList.toggle('active',e.id===name));
+    if(name==='youtube')switchYoutubeView('comments');
+  }
   function parseCsv(text){
     text=text.replace(/^\ufeff/,'');
     const delimiter=(text.split(/\r?\n/,1)[0].match(/;/g)||[]).length>(text.split(/\r?\n/,1)[0].match(/,/g)||[]).length?';':',';
@@ -489,6 +505,8 @@
     $('connect').addEventListener('click',connect);
     $('disconnect').addEventListener('click',()=>{if(token&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(token,()=>{});token='';tokenExpires=0;logged=false;commentMap.clear();selected='';pageToken='';authState();renderComments();notice('Rozłączono Google. Token nie był przechowywany na dysku.');});
     document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+    document.querySelectorAll('[data-yt-view]').forEach(b=>b.addEventListener('click',()=>switchYoutubeView(b.dataset.ytView)));
+    switchYoutubeView('comments');
     document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c===b));renderComments()}));
     $('refresh').addEventListener('click',()=>loadComments(false));$('older').addEventListener('click',()=>loadComments(true));$('search').addEventListener('input',renderComments);
     $('send').addEventListener('click',sendReply);

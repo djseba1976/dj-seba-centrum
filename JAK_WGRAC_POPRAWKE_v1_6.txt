@@ -1,0 +1,28 @@
+DJ SEBA – CENTRUM ARTYSTY · WEB v1.6
+NAPRAWA WIDOKU KOMENTARZY YOUTUBE
+
+Dla aktualizacji z działającej v1.5:
+1. Najpierw otwórz obecną stronę i pobierz kopię raportów JSON (Ustawienia / pomoc).
+2. Rozpakuj ZIP. Nie wrzucaj samego ZIP na GitHub.
+3. Otwórz: https://github.com/djseba1976/dj-seba-centrum/upload/main
+4. Wybierz/wgraj do głównego katalogu repozytorium cztery pliki:
+   - index.html
+   - app.js
+   - hub.css
+   - manifest.webmanifest
+5. Zatwierdź Commit changes.
+6. Wejdź na https://djseba1976.github.io/ i sprawdź WEB v1.6.
+7. Po połączeniu Google kliknij YouTube. Domyślnie zobaczysz
+   'Komentarze i odpowiedzi'; oddzielny przycisk otwiera 'Filmy i statystyki'.
+8. Sprawdź listę komentarzy, wybierz komentarz, zweryfikuj i zatwierdź odpowiedź.
+
+ZACHOWANE:
+- Google OAuth poprawione w v1.4 (ID klienta niezmienione)
+- kod komentarzy i wysyłania odpowiedzi z v1.4/v1.5
+- wszystkie dane w localStorage (klucze nie zostały zmienione)
+- YouTube statystyki, Spotify, DistroKid, Facebook, Instagram, TikTok, Google Play
+- hub.js i style.css bez zmian; bez modyfikacji wpisów historii
+
+UWAGA: weryfikacja integracji YouTube została wykonana na symulowanych
+odpowiedziach API w dwóch rozmiarach ekranu. Logowania do konta DJ SEBA
+ani publikacji na żywym kanale nie wykonywano.

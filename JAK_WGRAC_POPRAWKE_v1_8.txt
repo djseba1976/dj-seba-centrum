@@ -1,0 +1,23 @@
+DJ SEBA – Centrum Artysty WEB v1.8
+
+NOWOŚĆ: Sortowanie YouTube → Filmy i statystyki → Sortuj filmy:
+- Polubienia: najwięcej
+- Polubienia: najmniej
+Pozostałe sześć sposobów sortowania z v1.7 nadal działa.
+Brakujące wartości zawsze trafiają na koniec listy.
+
+INSTALACJA (podmiana v1.7 → v1.8)
+1. W działającej v1.7 przejdź Ustawienia / pomoc → Pobierz kopię wszystkich raportów (JSON).
+2. Rozpakuj ZIP i otwórz repozytorium: https://github.com/djseba1976/dj-seba-centrum/upload/main
+3. Wgraj z głównego katalogu ZIP dokładnie 3 pliki:
+   index.html
+   hub.js
+   manifest.webmanifest
+4. Zatwierdź Commit changes.
+5. Otwórz https://djseba1976.github.io/; sprawdź WEB v1.8.
+6. YouTube → Filmy i statystyki → Sortuj filmy → Polubienia: najwięcej.
+   Jeśli polubień nie widać, kliknij „Pobierz statystyki YT”, by odświeżyć dane.
+
+Nie trzeba nic zmieniać w Google Cloud. Zachowano nazwy kluczy localStorage
+i dotychczasowe zasady zapisu; nie ma migracji ani resetu danych.
+Nie zmieniano app.js, hub.css ani style.css.

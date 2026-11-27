@@ -1,5 +1,5 @@
 'use strict';
-/* DJ SEBA Centrum Artysty v1.7 – sortowanie YouTube; zachowanie danych v1.4/v1.5. */
+/* DJ SEBA Centrum Artysty v1.8 – sortowanie filmów także wg polubień; zachowanie danych v1.4–v1.7. */
 (() => {
   const $ = id => document.getElementById(id);
   const HUB_KEY='djseba_hub_v15';
@@ -10,6 +10,8 @@
     ['published_asc','Data publikacji: najstarsze'],
     ['views_desc','Wyświetlenia: najwięcej'],
     ['views_asc','Wyświetlenia: najmniej'],
+    ['likes_desc','Polubienia: najwięcej'],
+    ['likes_asc','Polubienia: najmniej'],
     ['comments_desc','Komentarze: najwięcej'],
     ['comments_asc','Komentarze: najmniej']
   ];
@@ -194,7 +196,7 @@
     s('text',{x:px,y:H-4,fill:'#9cbecb','font-size':11},limited[0].at.slice(0,10));s('text',{x:W-px,y:H-4,fill:'#9cbecb','font-size':11,'text-anchor':'end'},limited[limited.length-1].at.slice(0,10));container.append(svg)
   }
   function renderPlatformEditor(platform){const root=document.querySelector(`[data-hub-platform="${platform}"]`);if(!root)return;const isTik=platform==='tiktok';
-    const youtubeSort=platform==='youtube'?`<div class="hub-youtube-sort"><label for="hub-sort-youtube">Sortuj filmy<select id="hub-sort-youtube" aria-label="Sortowanie filmów YouTube">${YT_SORT_OPTIONS.map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></label><small class="muted" id="hub-sort-count-youtube" aria-live="polite"></small><small class="muted">Daty to daty publikacji udostępniane przez YouTube. Liczba komentarzy dotyczy filmu, nie komentarzy oczekujących na odpowiedź. Brakujące wartości zawsze na końcu.</small></div>`:'';
+    const youtubeSort=platform==='youtube'?`<div class="hub-youtube-sort"><label for="hub-sort-youtube">Sortuj filmy<select id="hub-sort-youtube" aria-label="Sortowanie filmów YouTube">${YT_SORT_OPTIONS.map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></label><small class="muted" id="hub-sort-count-youtube" aria-live="polite"></small><small class="muted">Daty to daty publikacji udostępniane przez YouTube. Polubienia i komentarze dotyczą danego filmu (nie Twoich odpowiedzi). Brakujące wartości zawsze na końcu.</small></div>`:'';
     root.innerHTML=`<div class="hub-row hub-wrap hub-actions"><label class="hub-upload">Importuj CSV / Excel<input type="file" accept=".csv,.xlsx,.xls" multiple data-import="${platform}"></label><button class="ghost" data-manual="${platform}" type="button">+ Dodaj film / wpis</button><button class="ghost" data-account="${platform}" type="button">+ Liczba obserwujących</button><button class="ghost" data-export="${platform}" type="button">↓ Eksport CSV</button></div><div class="hub-box hub-manual" id="hub-form-${platform}" hidden><h3>Dodaj lub zaktualizuj publikację</h3><div class="hub-form-grid"><label>Tytuł / opis<input name="title" maxlength="300" required></label><label>ID publikacji (opcjonalnie)<input name="id" maxlength="160"></label><label>Data publikacji<input type="date" name="published"></label><label>Bezpośredni link<input type="url" name="link" placeholder="https://..."></label><label>Miniatura (URL)<input type="url" name="thumb" placeholder="https://..."></label><label>Wyświetlenia<input type="number" min="0" name="views"></label><label>Polubienia / reakcje<input type="number" min="0" name="likes"></label><label>Komentarze<input type="number" min="0" name="comments"></label><label>Udostępnienia<input type="number" min="0" name="shares"></label><label>Zasięg<input type="number" min="0" name="reach"></label></div><div class="hub-row hub-wrap"><button class="primary" type="button" data-save="${platform}">Zapisz pomiar</button><button class="ghost" type="button" data-hide="${platform}">Anuluj</button></div></div><div class="hub-grid four" id="hub-metrics-${platform}"></div><div class="hub-box"><div class="hub-row hub-between"><h3>Publikacje i ich statystyki</h3><small id="hub-meta-${platform}" class="muted">Brak pomiarów</small></div><div class="hub-search-row"><input type="search" id="hub-search-${platform}" placeholder="Filtruj filmy i posty..." aria-label="Szukaj publikacji"></div>${youtubeSort}<div id="hub-list-${platform}"></div></div><div class="hub-box"><h3>Historia pomiarów wyświetleń</h3><div id="hub-chart-${platform}" class="hub-chart"></div><p class="muted hub-small">Przyrost wyliczamy z dwóch lub więcej pomiarów, nie z jednej wartości.</p></div>`;
     root.querySelector(`[data-import="${platform}"]`).addEventListener('change',async e=>{await importFiles(platform,[...e.target.files]);e.target.value=''});
     root.querySelector(`[data-manual="${platform}"]`).addEventListener('click',()=>{$(`hub-form-${platform}`).hidden=false});
@@ -215,7 +217,7 @@
   }
   function sortYoutubeVideos(a,b){
     const [field,direction]=ytVideoSort.split('_');
-    const key=field==='views'?'views':field==='comments'?'comments':'published';
+    const key=['views','likes','comments'].includes(field)?field:'published';
     const extract=x=>key==='published'?(x.published||''):isFiniteNumber(x[key])?Number(x[key]):null;
     const x=extract(a),y=extract(b);
     const missingX=x===null||x==='',missingY=y===null||y==='';

@@ -1,0 +1,5 @@
+WEB v1.8 (27.11.2026)
+- Dodano dwa warianty sortowania po liczbie polubień YouTube: malejąco/rosnąco.
+- Zachowano sortowanie po dacie, wyświetleniach i komentarzach.
+- Preferencja sortowania pozostaje w dotychczasowym kluczu localStorage.
+- Nie zmieniano logowania Google, komentarzy ani wysyłania odpowiedzi, importów i pozostałych platform.

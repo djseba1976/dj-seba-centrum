@@ -9,3 +9,10 @@ html.fb-embedded main{padding:8px 0 10px}
 html.fb-embedded main>.eyebrow,html.fb-embedded main>h1,html.fb-embedded main>.lead{display:none}
 html.fb-embedded .panel{padding:16px}
 @media(max-width:520px){html.fb-embedded .panel{padding:12px}}
+
+/* Zapamiętywanie urządzenia – v1.9.1 */
+.remember-device{display:flex;gap:10px;align-items:flex-start;flex:1 0 100%;font-weight:400;cursor:pointer}
+.remember-device input{width:18px;height:18px;min-width:18px;accent-color:var(--teal);margin:2px 0 0;padding:0;cursor:pointer}
+.remember-device b{display:block;color:#e4fbfa;font-size:13px}
+.remember-device small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+#sessionInfo{color:#8bede2}

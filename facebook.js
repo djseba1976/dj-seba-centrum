@@ -1,11 +1,12 @@
-/* DJ SEBA Facebook, dodatek v1.9. Bez tokenu Meta w frontendzie. */
+/* DJ SEBA Facebook, dodatek v1.9.1 — sesje urządzeń zaufanych. Bez tokenu Meta w frontendzie. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const state = { worker:'', password:'', posts:[], comments:[], postAfter:null, commentAfter:null, selectedPost:null, filter:'all', loading:false, replyTo:null };
+  const state = { worker:'', session:'', expiresAt:null, posts:[], comments:[], postAfter:null, commentAfter:null, selectedPost:null, filter:'all', loading:false, replyTo:null };
   const KEY_HANDLED = 'djseba_fb_handled_v1';
   const KEY_WORKER = 'djseba_fb_worker_url_v1';
   const KEY_REPLIED = 'djseba_fb_reply_count_v1';
+  const KEY_SESSION = 'djseba_fb_device_session_v191';
   function readObject(key) { try { const x = JSON.parse(localStorage.getItem(key)||'{}'); return x && typeof x === 'object' ? x : {}; } catch { return {}; } }
   function handled() { return readObject(KEY_HANDLED); }
   function storeHandled(id, status) { const obj = handled(); if(status) obj[id] = {status, at:new Date().toISOString()}; else delete obj[id]; localStorage.setItem(KEY_HANDLED, JSON.stringify(obj)); }
@@ -14,13 +15,51 @@
   function clear(n) { n.replaceChildren(); }
   function show(message, kind='info') { const n=$('notice'); n.hidden=false; n.className='notice '+kind; n.textContent=message; }
   function setConnected(ok) { $('connectionStatus').textContent=ok?'Połączono':'Niepołączony'; $('connectionStatus').className='status'+(ok?' ok':''); $('refreshButton').disabled=!ok; }
-  function busy(value){state.loading=value; $('connectButton').disabled=value; $('refreshButton').disabled=value||!state.password; $('morePostsButton').disabled=value; $('moreCommentsButton').disabled=value;}
+  function busy(value){state.loading=value; $('connectButton').disabled=value; $('refreshButton').disabled=value||!state.session; $('morePostsButton').disabled=value; $('moreCommentsButton').disabled=value;}
   function apiUrl(path, params) { const u=new URL(path,state.worker+'/'); for(const [k,v] of Object.entries(params||{})) if(v!=null)u.searchParams.set(k,String(v)); return u.toString(); }
+  function forgetSession(){
+    state.session='';state.expiresAt=null;
+    try{localStorage.removeItem(KEY_SESSION);}catch{}
+  }
+  function saveSession(info,remember){
+    state.session=String(info.token||'');state.expiresAt=info.expires_at;
+    if(remember){
+      try{localStorage.setItem(KEY_SESSION,JSON.stringify({worker:state.worker,token:state.session,expires_at:state.expiresAt}));}
+      catch{show('Sesja działa, ale przeglądarka nie pozwoliła jej zapamiętać.','error');}
+    }else{try{localStorage.removeItem(KEY_SESSION);}catch{}}
+  }
+  function setSessionText(){
+    const element=$('sessionInfo');
+    if(state.session && state.expiresAt){
+      const expiry=new Date(state.expiresAt);
+      element.textContent='Sesja aktywna do '+expiry.toLocaleString('pl-PL',{dateStyle:'short',timeStyle:'short'})+'. Możesz zamknąć stronę.';
+    }else element.textContent='Sesja nieaktywna. Na zaufanym urządzeniu możesz ją zapamiętać na 30 dni.';
+  }
   async function api(path,opts={}) {
-    if(!state.worker || !state.password) throw Error('Najpierw połącz panel z serwerem.');
-    const response=await fetch(apiUrl(path,opts.query),{method:opts.method||'GET',headers:{'X-Panel-Key':state.password,...(opts.body?{'Content-Type':'application/json'}:{})},body:opts.body?JSON.stringify(opts.body):undefined,cache:'no-store'});
-    let payload; try{payload=await response.json();} catch {throw Error('Serwer nie zwrócił poprawnej odpowiedzi JSON. Sprawdź jego adres.');}
-    if(!response.ok) throw Error(payload.error || 'Błąd serwera '+response.status);
+    if(!state.worker || !state.session) throw Error('Najpierw połącz panel z serwerem.');
+    if(state.expiresAt && Date.now()>=new Date(state.expiresAt).getTime()){
+      forgetSession();setConnected(false);setSessionText();throw Error('Sesja wygasła. Zaloguj się ponownie.');
+    }
+    const response=await fetch(apiUrl(path,opts.query),{
+      method:opts.method||'GET',
+      headers:{'Authorization':'Bearer '+state.session,...(opts.body?{'Content-Type':'application/json'}:{})},
+      body:opts.body?JSON.stringify(opts.body):undefined,cache:'no-store'
+    });
+    let payload;try{payload=await response.json();}catch{throw Error('Serwer nie zwrócił poprawnej odpowiedzi JSON. Sprawdź jego adres.');}
+    if(!response.ok){
+      if(response.status===401){forgetSession();setConnected(false);setSessionText();}
+      throw Error(payload.error||'Błąd serwera '+response.status);
+    }
+    return payload;
+  }
+  async function createSession(worker,password,remember){
+    const response=await fetch(worker+'/api/session',{
+      method:'POST',headers:{'Content-Type':'application/json','X-Panel-Key':password},
+      body:JSON.stringify({remember}),cache:'no-store'
+    });
+    let payload;try{payload=await response.json();}catch{throw Error('Serwer nie zwrócił poprawnej odpowiedzi JSON.');}
+    if(!response.ok)throw Error(payload.error||'Logowanie nieudane.');
+    if(!payload.token||!payload.expires_at)throw Error('Serwer nie obsługuje jeszcze sesji. Zaktualizuj worker.js do v1.9.1.');
     return payload;
   }
   function renderPosts(){
@@ -113,18 +152,46 @@
   }
   $('workerUrl').value=localStorage.getItem(KEY_WORKER)||'';
   $('replyCount').textContent=localStorage.getItem(KEY_REPLIED)||'0';
+  setSessionText();
   $('connectForm').addEventListener('submit',async e=>{
     e.preventDefault();const addr=$('workerUrl').value.trim().replace(/\/+$/,'');
-    let url;try{url=new URL(addr);if(url.protocol!=='https:')throw Error();}catch{show('Wpisz poprawny adres HTTPS serwera.','error');return;}
-    state.worker=url.origin;state.password=$('panelKey').value;
-    busy(true);
-    try{const info=await api('/api/me');if(!info.ok)throw Error('Brak potwierdzenia połączenia.');
-      localStorage.setItem(KEY_WORKER,state.worker);setConnected(true);$('panelKey').value='';show('Połączono z serwerem strony DJ SEBA.','success');
+    let url;try{url=new URL(addr);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.pathname!=='/')throw Error();}
+    catch{show('Wpisz poprawny adres HTTPS serwera.','error');return;}
+    const password=$('panelKey').value;
+    if(!password){show('Wpisz hasło dostępu do panelu.','error');return;}
+    state.worker=url.origin;busy(true);
+    try{
+      const remember=$('rememberDevice').checked;
+      const issued=await createSession(state.worker,password,remember);
+      saveSession(issued,remember);
+      $('panelKey').value=''; // Nie zachowujemy hasła po logowaniu.
+      const info=await api('/api/me');if(!info.ok)throw Error('Brak potwierdzenia połączenia.');
+      localStorage.setItem(KEY_WORKER,state.worker);setConnected(true);setSessionText();
+      show(remember?'Połączono. Urządzenie zapamiętane na 30 dni.':'Połączono na bieżącą sesję.','success');
       await loadPosts(true);
-    }catch(err){state.password='';setConnected(false);show('Błąd połączenia: '+err.message,'error');}
+    }catch(err){forgetSession();setConnected(false);setSessionText();show('Błąd połączenia: '+err.message,'error');}
     finally{busy(false);}
   });
-  $('disconnectButton').addEventListener('click',()=>{state.password='';state.posts=[];state.comments=[];state.selectedPost=null;state.postAfter=null;state.commentAfter=null;setConnected(false);$('postCount').textContent='—';$('commentCount').textContent='—';$('selectedPostTitle').textContent='Nie wybrano posta';$('morePostsButton').hidden=true;$('moreCommentsButton').hidden=true;renderPosts();renderComments();show('Rozłączono. Hasło dostępu zostało usunięte z pamięci tej strony.');});
+  $('disconnectButton').addEventListener('click',()=>{
+    forgetSession();state.posts=[];state.comments=[];state.selectedPost=null;state.postAfter=null;state.commentAfter=null;
+    setConnected(false);setSessionText();$('postCount').textContent='—';$('commentCount').textContent='—';
+    $('selectedPostTitle').textContent='Nie wybrano posta';$('morePostsButton').hidden=true;$('moreCommentsButton').hidden=true;
+    renderPosts();renderComments();show('Rozłączono. Zapamiętana sesja została usunięta z tej przeglądarki.');
+  });
+  (async function restoreSession(){
+    let stored;try{stored=JSON.parse(localStorage.getItem(KEY_SESSION)||'null');}catch{return;}
+    if(!stored || typeof stored.worker!=='string'||typeof stored.token!=='string'||typeof stored.expires_at!=='string')return;
+    if(new Date(stored.expires_at).getTime()<=Date.now()){forgetSession();return;}
+    try{const u=new URL(stored.worker);if(u.protocol!=='https:'||u.pathname!=='/'||u.search||u.hash)return;state.worker=u.origin;}
+    catch{return;}
+    state.session=stored.token;state.expiresAt=stored.expires_at;
+    $('workerUrl').value=state.worker;
+    busy(true);
+    try{const info=await api('/api/me');if(!info.ok)throw Error('Sesja nieprawidłowa.');
+      setConnected(true);setSessionText();show('Przywrócono zapamiętane połączenie z Facebookiem.','success');await loadPosts(true);
+    }catch(err){forgetSession();setConnected(false);setSessionText();show('Zapisana sesja nie działa. Wpisz hasło i połącz ponownie.','error');}
+    finally{busy(false);}
+  })();
   $('refreshButton').addEventListener('click',()=>loadPosts(true));
   $('morePostsButton').addEventListener('click',()=>loadPosts(false));
   $('moreCommentsButton').addEventListener('click',()=>loadComments(false));

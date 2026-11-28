@@ -27,9 +27,10 @@
           <label>Hasło dostępu do panelu
             <input id="panelKey" type="password" required autocomplete="off" placeholder="Hasło ustawione na serwerze">
           </label>
+          <label class="remember-device"><input type="checkbox" id="rememberDevice"><span><b>Zapamiętaj to urządzenie na 30 dni</b><small>Tylko na własnym, zaufanym komputerze lub telefonie. Nie zaznaczaj na współdzielonym laptopie służbowym.</small></span></label>
           <div class="actions"><button type="submit" class="primary" id="connectButton">Połącz i pobierz posty</button><button type="button" class="secondary" id="disconnectButton">Rozłącz</button></div>
         </form>
-        <p class="hint">Hasło nie jest zapisywane w przeglądarce. Po ponownym otwarciu strony trzeba je wpisać jeszcze raz.</p>
+        <p class="hint">Hasło nigdy nie jest zapisywane w przeglądarce. Po zaznaczeniu opcji zapamiętania urządzenie przechowuje wyłącznie ograniczony czasowo token sesji. <span id="sessionInfo" aria-live="polite">Sesja nieaktywna.</span></p>
       </section>
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
       <section class="metrics" aria-label="Statystyki">

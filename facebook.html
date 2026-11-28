@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Facebook • DJ SEBA – Centrum Artysty</title>
+  <link rel="stylesheet" href="./facebook.css">
+  <script src="./facebook.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="./index.html"><span class="logo">DS</span><span><b>DJ SEBA</b><small>CENTRUM ARTYSTY · FACEBOOK</small></span></a>
+      <a class="back" href="./index.html">← Wróć do pulpitu</a>
+    </header>
+    <main>
+      <div class="eyebrow">TWOJE MEDIA · FACEBOOK DJ SEBA</div>
+      <h1>Komentarze i odpowiedzi</h1>
+      <p class="lead">Komentarze pobierane z Twojej strony Facebook. Odpowiedź jest publikowana dopiero po Twoim kliknięciu „Wyślij”.</p>
+      <section class="panel connection" aria-labelledby="connection-title">
+        <div class="section-head"><div><h2 id="connection-title">Połączenie z Facebookiem</h2><p>Token Meta pozostaje na serwerze. Tutaj wpisujesz tylko adres swojego serwera i hasło dostępu do panelu.</p></div><span class="status" id="connectionStatus" aria-live="polite">Niepołączony</span></div>
+        <form id="connectForm" class="connect-form">
+          <label>Adres serwera (Cloudflare Worker)
+            <input id="workerUrl" type="url" required autocomplete="url" placeholder="https://twoj-serwer.workers.dev" spellcheck="false">
+          </label>
+          <label>Hasło dostępu do panelu
+            <input id="panelKey" type="password" required autocomplete="off" placeholder="Hasło ustawione na serwerze">
+          </label>
+          <div class="actions"><button type="submit" class="primary" id="connectButton">Połącz i pobierz posty</button><button type="button" class="secondary" id="disconnectButton">Rozłącz</button></div>
+        </form>
+        <p class="hint">Hasło nie jest zapisywane w przeglądarce. Po ponownym otwarciu strony trzeba je wpisać jeszcze raz.</p>
+      </section>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section class="metrics" aria-label="Statystyki">
+        <div class="metric"><span>Wczytane posty</span><strong id="postCount">—</strong></div>
+        <div class="metric"><span>Komentarze pod postami</span><strong id="commentCount">—</strong></div>
+        <div class="metric"><span>Odpowiedzi wysłane z panelu*</span><strong id="replyCount">0</strong></div>
+      </section>
+      <div class="layout">
+        <section class="panel posts" aria-labelledby="posts-title">
+          <div class="section-head"><h2 id="posts-title">Posty DJ SEBA</h2><button id="refreshButton" class="secondary" disabled>↻ Odśwież</button></div>
+          <p class="muted">Wybierz post, żeby odczytać jego komentarze.</p>
+          <div id="postList" class="post-list"><p class="empty">Połącz serwer, aby pobrać posty.</p></div>
+          <button id="morePostsButton" class="secondary wide" hidden>Wczytaj więcej postów</button>
+        </section>
+        <section class="panel comments" aria-labelledby="comments-title">
+          <div class="section-head"><div><h2 id="comments-title">Komentarze</h2><p id="selectedPostTitle" class="muted">Nie wybrano posta</p></div><span id="selectedCount" class="small-count"></span></div>
+          <div class="filters"><button type="button" class="filter active" data-filter="all">Wszystkie</button><button type="button" class="filter" data-filter="new">Do obsługi</button><button type="button" class="filter" data-filter="handled">Obsłużone</button></div>
+          <div id="commentList" class="comment-list"><p class="empty">Wybierz post po lewej stronie.</p></div>
+          <button id="moreCommentsButton" class="secondary wide" hidden>Wczytaj więcej komentarzy</button>
+        </section>
+      </div>
+      <p class="footnote">* Licznik i oznaczenia „obsłużone” są zapisane lokalnie w tej przeglądarce, nie synchronizują się między urządzeniami. Odpowiedzi rzeczywiście publikuje Facebook. Panel odczytuje dane po kliknięciu i nie pracuje w tle.</p>
+    </main>
+    <footer>DJ SEBA · Centrum Artysty · Facebook · Bez automatycznej publikacji</footer>
+  </div>
+  <dialog id="replyDialog" aria-labelledby="replyTitle">
+    <form id="replyForm" method="dialog">
+      <h2 id="replyTitle">Odpowiedz na komentarz</h2>
+      <p id="replyOriginal" class="quote"></p>
+      <label>Treść odpowiedzi
+        <textarea id="replyMessage" rows="5" maxlength="1800" required></textarea>
+      </label>
+      <p class="muted">Kliknięcie „Wyślij na Facebooka” opublikuje widoczną dla wszystkich odpowiedź jako DJ SEBA.</p>
+      <div class="actions end"><button id="cancelReply" class="secondary" type="button">Anuluj</button><button id="submitReply" class="primary" type="submit">Wyślij na Facebooka</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
